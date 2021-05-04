@@ -30,20 +30,21 @@ router.get('/users/me', auth, async (req, res) => {  //first it will run auth an
 //     }
 // })
 
-
+//to create a new user
 router.post('/users', async (req, res) => { // post is used to create a new document in database
     const user = new User(req.body);
     try {
         const savedUser = await user.save()
         const token = await savedUser.generateAuthToken()
         sendWelcomeMail(user.email, user.name)
-        res.send({ savedUser, token })
+        res.status(201).send({ savedUser, token })
     } catch (e) {
-        res.status(400) // to change status code
+        res.status(401) // to change status code
         res.send(e)  //these two lines can be written as: res.status(400).send(e)
     }
 })
 
+// to login a user
 router.post('/users/login', async (req, res) => {
     try {
         const user = await User.findByCredentials(req.body.email, req.body.password)
@@ -55,7 +56,7 @@ router.post('/users/login', async (req, res) => {
 })
 
 
-
+// to logout current user from current device
 router.post('/users/logout', auth, async (req, res) => {
     try {
         req.user.tokens = req.user.tokens.filter((token) => {
@@ -68,6 +69,7 @@ router.post('/users/logout', auth, async (req, res) => {
     }
 })
 
+// to logout current user from all device
 router.post('/users/logout/all', auth, async (req, res) => {
     try {
         req.user.tokens = []
@@ -79,6 +81,7 @@ router.post('/users/logout/all', auth, async (req, res) => {
 })
 
 //patch is used to update database
+// to update current users details.
 router.patch('/users/updateme', auth, async (req, res) => {
     const updateKeys = Object.keys(req.body)
     const allowedKeys = ['name', 'age', 'email', 'password']
@@ -99,6 +102,7 @@ router.patch('/users/updateme', auth, async (req, res) => {
     }
 })
 
+// to delete current user
 router.delete('/users/me', auth, async (req, res) => {
 
     try {
@@ -110,12 +114,12 @@ router.delete('/users/me', auth, async (req, res) => {
         await req.user.remove()
         res.send(req.user.getPublicProfile())
     } catch (e) {
-        res.send('error', e)
+        res.status(400).send('error', e)
     }
 
 })
 
-
+// multer us used to upload file to database
 const upload = multer({
     //dest: 'image',     // if we add this line then multer will save the binary file in task-manager other wise multer will pass the binary data to us to handle it
     limits: {
@@ -135,6 +139,8 @@ const upload = multer({
     }
 })
 
+
+// upload a avatar or profile picture
 router.post('/users/me/avatar', auth, upload.single('uploadit'), async (req, res) => {
     const buffer = await sharp(req.user.avatar).resize({width: 250, height: 250}).png().toBuffer()   //converting any type of image to png using sharp. We are using await because sharp is asynchronous
     
@@ -145,7 +151,7 @@ router.post('/users/me/avatar', auth, upload.single('uploadit'), async (req, res
     res.status(400).send({ error: error.message })
 })
 
-
+// delete current avatar
 router.delete('/users/me/deleteavatar', auth, async (req, res) => {
     try {
         req.user.avatar = undefined
